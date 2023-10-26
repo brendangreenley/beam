@@ -799,7 +799,7 @@ class BigQueryWrapper(object):
       num_retries=MAX_RETRIES,
       retry_filter=retry.retry_on_server_errors_and_timeout_filter)
   def get_or_create_dataset(
-      self, project_id, dataset_id, location=None, labels=None):
+      self, project_id, dataset_id, location=None, labels=None, max_time_travel_hours=None, storage_billing_model=None):
     # Check if dataset already exists otherwise create it
     try:
       dataset = self.client.datasets.Get(
@@ -822,6 +822,10 @@ class BigQueryWrapper(object):
           dataset.location = location
         if labels is not None:
           dataset.labels = _build_dataset_labels(labels)
+        if max_time_travel_hours is not None:
+          dataset.max_time_travel_hours = max_time_travel_hours
+        if storage_billing_model is not None:
+          dataset.storage_billing_model = storage_billing_model
         request = bigquery.BigqueryDatasetsInsertRequest(
             projectId=project_id, dataset=dataset)
         response = self.client.datasets.Insert(request)
@@ -893,9 +897,14 @@ class BigQueryWrapper(object):
   @retry.with_exponential_backoff(
       num_retries=MAX_RETRIES,
       retry_filter=retry.retry_on_server_errors_and_timeout_filter)
-  def create_temporary_dataset(self, project_id, location, labels=None):
+  def create_temporary_dataset(self, project_id, location, labels=None, max_time_travel_hours=48, storage_billing_model='LOGICAL'):
     self.get_or_create_dataset(
-        project_id, self.temp_dataset_id, location=location, labels=labels)
+        project_id,
+        self.temp_dataset_id,
+        location=location,
+        labels=labels,
+        max_time_travel_hours=max_time_travel_hours,
+        storage_billing_model=storage_billing_model)
 
     if (project_id is not None and not self.is_user_configured_dataset() and
         not self.created_temp_dataset):
